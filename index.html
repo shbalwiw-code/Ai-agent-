@@ -1,0 +1,807 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#58cc02" id="meta-theme-color">
+    <title>AI Context Agent - Premium Edition</title>
+    
+    <!-- خطوط جوجل المتميزة -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&family=Nunito:wght@700;900&display=swap" rel="stylesheet">
+    
+    <!-- مكتبات المصادقة وقاعدة البيانات -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+
+    <style>
+        /* ================= المتغيرات والألوان (16 لوناً) ================= */
+        :root {
+            --primary: #58cc02;
+            --primary-shadow: #58a700;
+            --primary-light: #d7ffb8;
+            --bg-main: #ffffff;
+            --bg-secondary: #f7f7f7;
+            --text-main: #3c3c3c;
+            --text-muted: #afafaf;
+            --card-border: #e5e5e5;
+            --white: #ffffff;
+            --danger: #ff4b4b;
+            --danger-shadow: #ea2b2b;
+            --radius-sm: 12px; --radius-md: 16px; --radius-lg: 24px; --radius-full: 99px;
+            --font-ar: 'Cairo', sans-serif; --font-en: 'Nunito', sans-serif;
+            --nav-height: 70px;
+        }
+
+        body.dark-mode {
+            --bg-main: #131415; --bg-secondary: #202225; --text-main: #ffffff;
+            --text-muted: #7a7a7a; --card-border: #2a2c30; --primary-light: rgba(88, 204, 2, 0.15);
+        }
+
+        /* ================= الإعدادات العامة ================= */
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body { font-family: var(--font-ar); background-color: var(--bg-main); color: var(--text-main); transition: 0.4s ease; overflow-x: hidden; padding-bottom: calc(var(--nav-height) + 20px); }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: var(--card-border); border-radius: 10px; }
+
+        /* ================= أسلوب أزرار دولينجو ثلاثية الأبعاد ================= */
+        .btn-3d {
+            background-color: var(--primary); color: var(--white); border: none;
+            border-bottom: 5px solid var(--primary-shadow); border-radius: var(--radius-md);
+            padding: 16px 24px; font-size: 18px; font-weight: 800; font-family: var(--font-ar);
+            cursor: pointer; transition: all 0.1s ease; display: inline-flex; align-items: center; justify-content: center; gap: 10px; width: 100%;
+        }
+        .btn-3d:active { transform: translateY(5px); border-bottom-width: 0px; margin-bottom: 5px; }
+        .btn-3d.secondary { background-color: var(--bg-main); color: var(--text-main); border: 2px solid var(--card-border); border-bottom: 5px solid var(--card-border); }
+
+        .card { background: var(--bg-main); border: 2px solid var(--card-border); border-radius: var(--radius-lg); padding: 20px; margin-bottom: 20px; box-shadow: 0 4px 0 var(--card-border); }
+        
+        input, select, textarea { width: 100%; padding: 16px; background-color: var(--bg-secondary); border: 2px solid var(--card-border); border-radius: var(--radius-md); font-family: var(--font-ar); font-size: 16px; font-weight: 600; color: var(--text-main); transition: 0.3s; outline: none; resize: vertical; }
+        input:focus, select:focus, textarea:focus { border-color: var(--primary); }
+
+        /* ================= المشاهد التفاعلية ================= */
+        .view { display: none; padding: 20px; min-height: 100vh; animation: slideIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; opacity: 0; }
+        .view.active { display: block; opacity: 1; }
+        @keyframes slideIn { from { opacity: 0; transform: translateY(30px) scale(0.95); } to { opacity: 1; transform: translateY(0) scale(1); } }
+
+        header { display: flex; justify-content: space-between; align-items: center; padding-bottom: 15px; margin-bottom: 25px; border-bottom: 2px solid var(--card-border); position: sticky; top: 0; background: var(--bg-main); z-index: 10; padding-top: 20px; }
+        .avatar-circle { width: 50px; height: 50px; border-radius: 50%; background-color: var(--primary-light); color: var(--primary); display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: 900; font-family: var(--font-en); border: 2px solid var(--primary); }
+
+        /* ================= شاشة الانتظار والترحيب ================= */
+        #splash-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg-main); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 9999; transition: opacity 0.5s ease; }
+        .loader-robot { width: 120px; height: 120px; fill: var(--primary); animation: pulseBot 1.5s infinite alternate; }
+        @keyframes pulseBot { 0% { transform: scale(1); } 100% { transform: scale(1.1); drop-shadow: 0 10px 20px var(--primary-light); } }
+        .login-wrapper { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 90vh; text-align: center; }
+
+        /* ================= السجل الزمني ================= */
+        .date-slider { display: flex; gap: 12px; overflow-x: auto; padding: 10px 5px 20px 5px; scroll-snap-type: x mandatory; flex-direction: row-reverse; } 
+        .date-item { flex: 0 0 calc(30% - 10px); background: var(--bg-secondary); border: 2px solid var(--card-border); border-bottom: 4px solid var(--card-border); border-radius: var(--radius-md); padding: 15px 10px; text-align: center; font-weight: 800; scroll-snap-align: center; cursor: pointer; transition: 0.2s; min-width: 80px; }
+        .date-item.active { background: var(--primary-light); border-color: var(--primary); border-bottom-color: var(--primary-shadow); color: var(--primary); transform: translateY(-2px); }
+        .date-day { font-size: 14px; opacity: 0.8; margin-bottom: 5px; }
+        .date-num { font-size: 22px; font-family: var(--font-en); }
+
+        /* ================= تبويبات الإعدادات ================= */
+        .tabs-container { display: flex; background: var(--bg-secondary); border-radius: var(--radius-lg); padding: 5px; margin-bottom: 20px; border: 2px solid var(--card-border); }
+        .tab-btn { flex: 1; padding: 12px 5px; text-align: center; font-weight: 800; font-size: 14px; color: var(--text-muted); cursor: pointer; border-radius: var(--radius-md); transition: 0.3s; }
+        .tab-btn.active { background: var(--bg-main); color: var(--primary); box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+        .tab-content { display: none; animation: fadeInTab 0.3s ease; }
+        .tab-content.active { display: block; }
+        @keyframes fadeInTab { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* ================= التخصيص والأتمتة ================= */
+        .setting-section { background: var(--bg-main); border: 2px solid var(--card-border); border-radius: var(--radius-lg); padding: 20px; margin-bottom: 25px; }
+        .toggle-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .toggle-info { display: flex; flex-direction: column; }
+        .toggle-title { font-weight: 800; font-size: 16px; }
+        .toggle-desc { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+        .switch { position: relative; display: inline-block; width: 60px; height: 34px; flex-shrink: 0; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: var(--card-border); transition: .4s; border-radius: 34px; border: 2px solid transparent; }
+        .slider:before { position: absolute; content: ""; height: 26px; width: 26px; left: 2px; bottom: 2px; background-color: white; transition: .4s; border-radius: 50%; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+        input:checked + .slider { background-color: var(--primary); border-color: var(--primary-shadow); }
+        input:checked + .slider:before { transform: translateX(26px); }
+
+        .time-picker-wrapper { height: 180px; overflow-y: scroll; scroll-snap-type: y mandatory; background: var(--bg-secondary); border-radius: var(--radius-md); border: 2px solid var(--card-border); position: relative; scrollbar-width: none; }
+        .time-picker-wrapper::-webkit-scrollbar { display: none; }
+        .time-picker-glass { position: absolute; top: 50%; left: 0; width: 100%; height: 60px; transform: translateY(-50%); border-top: 2px solid var(--primary); border-bottom: 2px solid var(--primary); background: var(--primary-light); pointer-events: none; z-index: 1; opacity: 0.3; }
+        .time-slot { height: 60px; display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: 800; color: var(--text-muted); scroll-snap-align: center; transition: 0.2s; direction: ltr; }
+        .time-slot.active { color: var(--primary); font-size: 32px; z-index: 2; position: relative; }
+        
+        .color-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-top: 15px; }
+        .color-btn { width: 100%; aspect-ratio: 1; border-radius: 50%; border: 4px solid var(--bg-secondary); cursor: pointer; transition: 0.3s; }
+        .color-btn.active { transform: scale(1.15); border-color: var(--text-main); }
+
+        /* ================= السكليتون المشرق ================= */
+        .skeleton-box { background: linear-gradient(90deg, var(--bg-secondary) 25%, var(--card-border) 50%, var(--bg-secondary) 75%); background-size: 200% 100%; animation: skeletonLoading 1.5s infinite; border-radius: var(--radius-sm); margin-bottom: 10px; }
+        @keyframes skeletonLoading { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+        /* ================= الإشعارات المحسنة مع زر الإغلاق X ================= */
+        #toast-container { position: fixed; top: 25px; left: 50%; transform: translateX(-50%); z-index: 10005; display: flex; flex-direction: column; gap: 12px; pointer-events: auto; width: 90%; max-width: 420px; }
+        .toast { background: var(--text-main); color: var(--bg-main); border: 2px solid var(--card-border); border-bottom: 5px solid rgba(0,0,0,0.2); border-radius: var(--radius-md); padding: 16px 20px; font-weight: 800; font-size: 14px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 8px 16px rgba(0,0,0,0.15); animation: toastBounce 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+        .toast.error { background: var(--danger); color: white; border-color: #d93d3d; }
+        .toast-close { background: none; border: none; color: inherit; font-size: 20px; font-weight: 900; cursor: pointer; margin-right: 15px; opacity: 0.7; transition: 0.2s; display: flex; align-items: center; justify-content: center; }
+        .toast-close:hover { opacity: 1; transform: scale(1.2); }
+        @keyframes toastBounce { 0% { opacity: 0; transform: translateY(-50px) scale(0.9); } 100% { opacity: 1; transform: translateY(0) scale(1); } }
+
+        /* ================= شريط التنقل السفلي والزر العائم ================= */
+        .bottom-nav { position: fixed; bottom: 0; left: 0; width: 100%; height: var(--nav-height); background: var(--bg-main); border-top: 2px solid var(--card-border); display: flex; justify-content: space-around; align-items: center; z-index: 1000; }
+        .nav-item { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px; color: var(--text-muted); cursor: pointer; flex: 1; height: 100%; transition: 0.2s; }
+        .nav-item svg { width: 26px; height: 26px; fill: currentColor; }
+        .nav-item span { font-size: 12px; font-weight: 800; }
+        .nav-item.active { color: var(--primary); }
+        .nav-item.active svg { transform: translateY(-3px) scale(1.1); }
+        
+        .fab { position: fixed; bottom: calc(var(--nav-height) + 20px); right: 20px; width: 60px; height: 60px; border-radius: 50%; background: var(--primary); border: none; border-bottom: 4px solid var(--primary-shadow); color: white; display: flex; align-items: center; justify-content: center; box-shadow: 0 10px 20px var(--primary-light); cursor: pointer; z-index: 999; }
+        .fab:active { transform: translateY(4px); border-bottom-width: 0; }
+        .fab svg { width: 30px; height: 30px; fill: white; }
+
+        .markdown-content { font-size: 16px; line-height: 1.8; font-weight: 600; color: var(--text-main); }
+        .markdown-content h1, .markdown-content h2, .markdown-content h3 { color: var(--primary); margin-top: 15px; margin-bottom: 10px; font-weight: 900;}
+        .markdown-content p { margin-bottom: 12px; }
+        .markdown-content strong { color: var(--primary); background: var(--primary-light); padding: 2px 6px; border-radius: 6px; }
+        .markdown-content ul, .markdown-content ol { padding-right: 25px; margin-bottom: 15px; }
+        .markdown-content li { margin-bottom: 8px; }
+    </style>
+</head>
+<body>
+
+    <!-- حاوية الإشعارات العلوية المتميزة -->
+    <div id="toast-container"></div>
+
+    <!-- شاشة التحميل الرائعة -->
+    <div id="splash-screen">
+        <svg class="loader-robot" viewBox="0 0 100 100">
+            <rect x="20" y="30" width="60" height="45" rx="10"/>
+            <circle cx="35" cy="50" r="6" fill="#fff"/>
+            <circle cx="65" cy="50" r="6" fill="#fff"/>
+            <path d="M40 65 h20" stroke="#fff" stroke-width="4" stroke-linecap="round"/>
+            <path d="M50 15 v15" stroke="currentColor" stroke-width="4" stroke-linecap="round"/>
+            <circle cx="50" cy="15" r="5" fill="currentColor"/>
+        </svg>
+        <h2 style="margin-top: 20px; color: var(--primary); font-family: var(--font-en);">AI Agent</h2>
+        <p style="color: var(--text-muted); font-size: 14px; margin-top: 10px;">نظام ذكي وشخصي مستقل</p>
+    </div>
+
+    <!-- 1. واجهة تسجيل الدخول المزدوجة -->
+    <div id="login-view" class="view">
+        <div class="login-wrapper">
+            <h1 style="font-size: 32px; margin-bottom: 10px;">مرحباً بك في <span style="color: var(--primary); font-family: var(--font-en);">AI Agent</span></h1>
+            <p style="color: var(--text-muted); margin-bottom: 40px; font-weight: 600;">سجل بحسابك لحفظ دائم أو ادخل كضيف فوري.</p>
+            
+            <div style="background: var(--bg-secondary); padding: 25px; border-radius: var(--radius-lg); border: 2px dashed var(--card-border); width: 100%; display: flex; flex-direction: column; gap: 15px;">
+                <!-- تسجيل الدخول بجوجل -->
+                <div id="g_id_onload" data-client_id="734021559937-kfketu7e6umkgb8sgomopthedo4it7ok.apps.googleusercontent.com" data-context="signin" data-ux_mode="popup" data-callback="handleCredentialResponse" data-auto_prompt="false"></div>
+                <div class="g_id_signin" data-type="standard" data-size="large" data-theme="filled_black" data-text="sign_in_with" data-shape="pill" data-logo_alignment="left" style="display:flex; justify-content:center;"></div>
+                
+                <div style="display: flex; align-items: center; text-align: center; color: var(--text-muted); font-weight: 800; font-size: 14px;">
+                    <div style="flex-grow: 1; height: 1px; background: var(--card-border);"></div>
+                    <span style="margin: 0 15px;">أو</span>
+                    <div style="flex-grow: 1; height: 1px; background: var(--card-border);"></div>
+                </div>
+
+                <!-- الدخول الفوري كضيف -->
+                <button class="btn-3d secondary" onclick="App.Auth.loginAsGuest()" style="padding: 12px; font-size: 16px;">
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" style="margin-left: 8px;"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/></svg>
+                    المتابعة كـ ضيف (حفظ محلي)
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. الشاشة الرئيسية (الداشبورد) -->
+    <div id="dashboard-view" class="view">
+        <header>
+            <div style="display:flex; align-items:center; gap:15px;">
+                <div class="avatar-circle" id="user-avatar-initial">A</div>
+                <div>
+                    <h2 style="margin: 0; font-size: 20px; font-weight: 800;">مرحباً، <span id="user-name-display" style="color: var(--primary);"></span>! <span id="guest-badge" style="display:none; font-size:12px; background:var(--text-muted); color:var(--bg-main); padding:2px 8px; border-radius:10px;">ضيف</span></h2>
+                    <p style="margin: 0; font-size: 12px; font-weight: 600; color: var(--text-muted);" id="today-date-text"></p>
+                </div>
+            </div>
+        </header>
+
+        <h4 style="color: var(--text-muted); margin-bottom: 10px; font-weight: 800;">السجل الزمني</h4>
+        <div class="date-slider" id="dynamic-date-slider"></div>
+
+        <div id="ai-messages-container" style="margin-top: 20px;">
+            <div id="msg-skeleton-loader" class="card" style="display:none;">
+                <div class="skeleton-box" style="width: 40%; height: 25px;"></div>
+                <div class="skeleton-box" style="width: 100%; height: 15px; margin-top:15px;"></div>
+                <div class="skeleton-box" style="width: 90%; height: 15px;"></div>
+                <div class="skeleton-box" style="width: 95%; height: 15px;"></div>
+            </div>
+            <div id="messages-list"></div>
+        </div>
+    </div>
+
+    <!-- 3. شاشة الإعدادات المتقدمة -->
+    <div id="settings-view" class="view">
+        <header><h2 style="font-weight: 900;">الإعدادات والتحكم</h2></header>
+
+        <div class="tabs-container">
+            <div class="tab-btn active" onclick="App.UI.switchTab('profile')">الملف الشخصي</div>
+            <div class="tab-btn" onclick="App.UI.switchTab('engine')">المحرك والنموذج</div>
+            <div class="tab-btn" onclick="App.UI.switchTab('appearance')">المظهر</div>
+        </div>
+
+        <!-- تبويب الملف الشخصي -->
+        <div id="tab-profile" class="tab-content active">
+            <div class="setting-section">
+                <h3 style="color: var(--primary); margin-bottom: 10px; font-weight: 800;">توجيهات المحرك الأساسية</h3>
+                <p style="font-size: 13px; font-weight: 600; color: var(--text-muted); margin-bottom: 15px;">اكتب كل اهتماماتك لبناء شخصية الذكاء الاصطناعي بدقة.</p>
+                <textarea id="profile-interests" rows="3" placeholder="مثال: مهتم بأخبار FC Mobile والبرمجة وتقنيات الويب..."></textarea>
+                <button class="btn-3d" onclick="App.AI.generateContextProfile()" style="margin-top: 15px; padding: 12px; font-size: 16px;">توليد ملف الذكاء الاصطناعي</button>
+            </div>
+
+            <div class="setting-section">
+                <h3 style="color: var(--primary); margin-bottom: 10px; font-weight: 800;">صندوق الاستيعاب (AI Context)</h3>
+                <p style="font-size: 13px; font-weight: 600; color: var(--text-muted); margin-bottom: 15px;">هذا ما تمت ترجمته وفهمه بناءً على وصفك ويُستخدم كبروفايل دائم:</p>
+                
+                <div id="context-skeleton" style="display:none; margin-bottom:15px;">
+                    <div class="skeleton-box" style="width: 100%; height: 15px;"></div>
+                    <div class="skeleton-box" style="width: 85%; height: 15px;"></div>
+                </div>
+                
+                <textarea id="ai-generated-context" rows="5" readonly style="background: var(--bg-main); border: 2px dashed var(--primary); color: var(--text-main); line-height: 1.8; font-size: 15px;" placeholder="سيظهر بروفايل الشخصية هنا بعد التحليل..."></textarea>
+            </div>
+            <button class="btn-3d" onclick="App.Settings.save()" style="margin-top: 10px;">حفظ الملف الشخصي</button>
+        </div>
+
+        <!-- تبويب المحرك والنماذج -->
+        <div id="tab-engine" class="tab-content">
+            <div class="setting-section">
+                <div class="toggle-row">
+                    <div class="toggle-info"><span class="toggle-title">الذكاء السياقي</span><span class="toggle-desc">دمج بروفايل الشخصية في التحليل الإبداعي</span></div>
+                    <label class="switch"><input type="checkbox" id="context-ai-toggle"><span class="slider"></span></label>
+                </div>
+                
+                <div id="cron-toggle-wrapper">
+                    <div class="toggle-row">
+                        <div class="toggle-info"><span class="toggle-title">تفعيل الأتمتة (Cron)</span><span class="toggle-desc">انطلاق الذكاء تلقائياً بدون تدخل منك</span></div>
+                        <label class="switch"><input type="checkbox" id="cron-enabled-toggle"><span class="slider"></span></label>
+                    </div>
+                </div>
+                <div id="guest-cron-notice" style="display:none; padding:10px; background:rgba(255, 75, 75, 0.1); border-radius:10px; color:var(--danger); font-size:12px; font-weight:700; margin-bottom:15px;">
+                    * خاصية الأتمتة التلقائية تتطلب تسجيل الدخول بحساب جوجل لتشغيل الخادم الخلفي.
+                </div>
+            </div>
+
+            <div class="setting-section">
+                <h3 style="margin-bottom: 15px; font-weight: 800;">طراز نموذج المعالجة (AI Model)</h3>
+                <select id="model-select">
+                    <option value="groq/compound">groq/compound (Llama 3.1 70B)</option>
+                    <option value="openai/gpt-oss-120b">openai/gpt-oss-120b (GPT-4o OS)</option>
+                </select>
+            </div>
+            
+            <div class="setting-section" id="time-slider-section">
+                <h3 style="margin-bottom: 15px; font-weight: 800; text-align: center;">موعد الانطلاق اليومي (ساعة)</h3>
+                <div class="time-picker-wrapper" id="time-slider">
+                    <div class="time-picker-glass"></div>
+                    <div id="time-slots-container"></div>
+                </div>
+            </div>
+            <button class="btn-3d" onclick="App.Settings.save()" style="margin-top: 10px;">حفظ التغييرات</button>
+        </div>
+
+        <!-- تبويب المظهر -->
+        <div id="tab-appearance" class="tab-content">
+            <div class="setting-section">
+                <div class="toggle-row">
+                    <div class="toggle-info"><span class="toggle-title">الوضع الليلي</span></div>
+                    <label class="switch"><input type="checkbox" id="dark-mode-toggle" onchange="App.UI.toggleDarkMode()"><span class="slider"></span></label>
+                </div>
+                <p style="font-weight: 900; margin-top: 20px; margin-bottom: 10px;">ثيم التطبيق المخصص (16 لوناً من دولينجو):</p>
+                <div class="color-grid" id="color-grid"></div>
+            </div>
+            
+            <button class="btn-3d" onclick="App.Settings.save()" style="margin-top: 10px;">حفظ المظهر</button>
+            <button class="btn-3d secondary" onclick="App.Auth.logout()" style="margin-top: 20px; color: var(--danger); border-color: var(--danger);">إنهاء الجلسة وتسجيل الخروج</button>
+        </div>
+        <div style="height: 100px;"></div>
+    </div>
+
+    <!-- الأزرار السفلية الثابتة -->
+    <button id="fab-btn" class="fab" onclick="App.AI.requestNewAnalysis()" style="display:none;">
+        <svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+    </button>
+    <nav class="bottom-nav" id="bottom-nav" style="display:none;">
+        <div class="nav-item active" onclick="App.UI.switchView('dashboard-view', this)"><svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg><span>الرئيسية</span></div>
+        <div class="nav-item" onclick="App.UI.switchView('settings-view', this)"><svg viewBox="0 0 24 24"><path d="M19.43 12.98c.04-.32.07-.64.07-.98s-.03-.66-.07-.98l2.11-1.65c.19-.15.24-.42.12-.64l-2-3.46c-.12-.22-.39-.3-.61-.22l-2.49 1c-.52-.4-1.08-.73-1.69-.98l-.38-2.65C14.46 2.18 14.25 2 14 2h-4c-.25 0-.46.18-.49.42l-.38 2.65c-.61.25-1.17.59-1.69.98l-2.49-1c-.23-.09-.49 0-.61.22l-2 3.46c-.13.22-.07.49.12.64l2.11 1.65c-.04.32-.07.65-.07.98s.03.66.07.98l-2.11 1.65c-.19.15-.24.42-.12.64l2 3.46c.12.22.39.3.61.22l2.49-1c.52.4 1.08.73 1.69.98l.38 2.65c.03.24.24.42.49.42h4c.25 0 .46-.18.49-.42l.38-2.65c.61-.25 1.17-.59 1.69-.98l2.49 1c.23.09.49 0 .61-.22l2-3.46c.12-.22.07-.49-.12-.64l-2.11-1.65zM12 15.5c-1.93 0-3.5-1.57-3.5-3.5s1.57-3.5 3.5-3.5 3.5 1.57 3.5 3.5-1.57 3.5-3.5 3.5z"/></svg><span>الإعدادات</span></div>
+    </nav>
+
+    <script>
+        /**
+         * =========================================
+         *  النواة الرئيسية للتطبيق ومفاتيح السيرفر
+         * =========================================
+         */
+        const App = {
+            Config: {
+                GROQ_API_KEY: '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',
+                SUPABASE_URL: 'https://icvcijbkhndigtsktlgx.supabase.co',
+                SUPABASE_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImljdmNpamJraG5kaWd0c2t0bGd4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAyMzc1NDIsImV4cCI6MjA5NTgxMzU0Mn0.oY84clpkpzsHgn9sji3x3Y_9crmC6QI-DMdG_-578nA',
+                COLORS: ['#58cc02', '#1cb0f6', '#ff4b4b', '#ffc800', '#ce82ff', '#2b70c9', '#ff9600', '#00c3af', '#f272a8', '#897463', '#a5edff', '#ffb0c7', '#574246', '#000000', '#74b816', '#fcc419']
+            },
+            State: { 
+                user: null, 
+                supabase: null,
+                isGuest: false // تتبع حالة الدخول كضيف
+            },
+            
+            init: async function() {
+                this.State.supabase = window.supabase.createClient(this.Config.SUPABASE_URL, this.Config.SUPABASE_KEY);
+                this.UI.renderColors(); 
+                this.UI.renderTimeSlider();
+                document.getElementById('today-date-text').innerText = new Date().toLocaleDateString('ar-EG', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+                await this.Auth.checkSession();
+            }
+        };
+
+        /**
+         * =========================================
+         *  محرك الواجهات والتأثيرات البصرية
+         * =========================================
+         */
+        App.UI = {
+            // إشعارات محسنة مع تفعيل زر الإغلاق والتموضع العلوي البارز
+            showToast: function(msg, type = 'success') {
+                const container = document.getElementById('toast-container');
+                const toast = document.createElement('div');
+                toast.className = `toast ${type === 'error' ? 'error' : ''}`;
+                toast.innerHTML = `
+                    <span>${msg}</span>
+                    <button class="toast-close" onclick="this.parentElement.remove()">×</button>
+                `;
+                container.appendChild(toast);
+                setTimeout(() => { if (toast.parentNode) toast.remove(); }, 4000);
+            },
+            switchView: function(id, nav = null) {
+                document.querySelectorAll('.view').forEach(v => { v.classList.remove('active'); v.style.display = 'none'; });
+                const v = document.getElementById(id); v.style.display = 'block'; void v.offsetWidth; v.classList.add('active');
+                if (nav) { document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active')); nav.classList.add('active'); }
+                document.getElementById('bottom-nav').style.display = (id === 'dashboard-view' || id === 'settings-view') ? 'flex' : 'none';
+                document.getElementById('fab-btn').style.display = id === 'dashboard-view' ? 'flex' : 'none';
+                if(id === 'dashboard-view') App.DB.loadMessages();
+            },
+            switchTab: function(tabName) {
+                document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+                event.target.classList.add('active');
+                document.getElementById(`tab-${tabName}`).classList.add('active');
+            },
+            toggleDarkMode: function() {
+                if(document.getElementById('dark-mode-toggle').checked) document.body.classList.add('dark-mode');
+                else document.body.classList.remove('dark-mode');
+            },
+            changeTheme: function(color) {
+                document.documentElement.style.setProperty('--primary', color);
+                document.documentElement.style.setProperty('--primary-shadow', '#' + color.replace(/^#/, '').replace(/../g, c => ('0'+Math.min(255, Math.max(0, parseInt(c, 16) - 40)).toString(16)).substr(-2)));
+                let r = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(color);
+                if(r) document.documentElement.style.setProperty('--primary-light', `rgba(${parseInt(r[1], 16)}, ${parseInt(r[2], 16)}, ${parseInt(r[3], 16)}, 0.15)`);
+            },
+            renderColors: function() {
+                const g = document.getElementById('color-grid'); g.innerHTML = '';
+                App.Config.COLORS.forEach(c => {
+                    const b = document.createElement('div'); b.className = 'color-btn'; b.style.backgroundColor = c;
+                    b.onclick = () => { document.querySelectorAll('.color-btn').forEach(el => el.classList.remove('active')); b.classList.add('active'); this.changeTheme(c); };
+                    g.appendChild(b);
+                });
+            },
+            renderTimeSlider: function() {
+                const c = document.getElementById('time-slots-container'); c.innerHTML = '<div class="time-slot"></div>';
+                for(let i=0; i<24; i++) { 
+                    const s = document.createElement('div'); s.className = 'time-slot'; s.dataset.val = i; 
+                    s.innerText = `${i.toString().padStart(2,'0')}:00`; c.appendChild(s); 
+                }
+                c.innerHTML += '<div class="time-slot"></div>';
+                const w = document.getElementById('time-slider');
+                w.addEventListener('scroll', () => {
+                    let center = w.scrollTop + (w.clientHeight / 2);
+                    document.querySelectorAll('.time-slot').forEach(s => {
+                        if(!s.dataset.val) return;
+                        if(Math.abs(center - (s.offsetTop + (s.clientHeight / 2))) < 30) s.classList.add('active');
+                        else s.classList.remove('active');
+                    });
+                });
+            },
+            renderDynamicDateSlider: function() {
+                const slider = document.getElementById('dynamic-date-slider');
+                slider.innerHTML = '';
+                
+                let createdDate;
+                if(App.State.isGuest) {
+                    createdDate = new Date(); createdDate.setDate(createdDate.getDate() - 2); // محاكاة يومين للضيف
+                } else {
+                    if(!App.State.user.created_at) return;
+                    createdDate = new Date(App.State.user.created_at);
+                }
+                
+                createdDate.setHours(0,0,0,0);
+                const today = new Date(); today.setHours(0,0,0,0);
+                
+                const diffTime = Math.abs(today - createdDate);
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                const daysCount = diffDays === 0 ? 1 : diffDays + 1; 
+
+                const daysAr = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
+                
+                for(let i = 0; i < daysCount; i++) {
+                    const d = new Date(today); d.setDate(today.getDate() - i);
+                    const item = document.createElement('div');
+                    item.className = `date-item ${i === 0 ? 'active' : ''}`;
+                    item.innerHTML = `<div class="date-day">${daysAr[d.getDay()]}</div><div class="date-num">${d.getDate()}/${d.getMonth()+1}</div>`;
+                    item.onclick = () => {
+                        document.querySelectorAll('.date-item').forEach(el => el.classList.remove('active'));
+                        item.classList.add('active');
+                        App.UI.showToast(`عرض بيانات يوم ${d.getDate()}/${d.getMonth()+1}`);
+                    };
+                    slider.appendChild(item);
+                }
+            },
+            parseMarkdown: function(text) {
+                let html = text.replace(/^### (.*$)/gim, '<h3>$1</h3>').replace(/^## (.*$)/gim, '<h2>$1</h2>').replace(/^# (.*$)/gim, '<h1>$1</h1>');
+                html = html.replace(/\*\*(.*?)\*\*/gim, '<strong>$1</strong>');
+                html = html.replace(/^\s*\n\*/gm, '<ul>\n*').replace(/^(\*|\-) (.*)/gim, '<li>$2</li>').replace(/<\/li>\n<ul>/gim, '<ul>');
+                return html.replace(/(<li>.*<\/li>\n)+/gim, m => `<ul>${m}</ul>`).replace(/\n\n/gim, '<br><br>');
+            }
+        };
+
+        /**
+         * =========================================
+         *  نظام الدخول والجلسات (الأعضاء والضيوف)
+         * =========================================
+         */
+        App.Auth = {
+            checkSession: async function() {
+                const session = localStorage.getItem('ai_agent_session');
+                const guestSession = localStorage.getItem('ai_agent_guest');
+                
+                setTimeout(async () => {
+                    document.getElementById('splash-screen').style.opacity = '0'; 
+                    setTimeout(() => document.getElementById('splash-screen').style.display = 'none', 500);
+                    
+                    if (session) {
+                        try {
+                            const u = JSON.parse(session);
+                            App.State.isGuest = false;
+                            await this.processLogin(u.email, u.name);
+                        } catch(e) {
+                            App.UI.switchView('login-view');
+                        }
+                    } else if (guestSession) {
+                        this.loginAsGuest();
+                    } else {
+                        App.UI.switchView('login-view');
+                    }
+                }, 1000);
+            },
+            processLogin: async function(email, name) {
+                const { data, error } = await App.State.supabase.from('users').select('*').eq('email', email).maybeSingle(); 
+                let userData = data;
+                if (!userData) {
+                    const defaultSettings = { theme_color: "#58cc02", dark_mode: true, context_ai: true, analysis_time: 8, cron_enabled: false, active_model: "groq/compound" };
+                    const { data: newUser } = await App.State.supabase.from('users').insert([{ email: email, name: name, settings: defaultSettings }]).select().single();
+                    userData = newUser;
+                    App.UI.showToast('تم تسجيل حسابك بنجاح في قاعدة البيانات!');
+                }
+                App.State.user = userData;
+                App.State.isGuest = false;
+                
+                localStorage.setItem('ai_agent_session', JSON.stringify({ email, name }));
+                localStorage.removeItem('ai_agent_guest'); // إزالة حالة الضيف
+
+                // تعديل الواجهة للأعضاء
+                document.getElementById('guest-badge').style.display = 'none';
+                document.getElementById('cron-toggle-wrapper').style.display = 'block';
+                document.getElementById('guest-cron-notice').style.display = 'none';
+                document.getElementById('time-slider-section').style.display = 'block';
+
+                document.getElementById('user-name-display').innerText = name.split(' ')[0];
+                document.getElementById('user-avatar-initial').innerText = name.charAt(0).toUpperCase();
+
+                App.Settings.applyToUI(userData.settings, userData.interests, userData.context_profile);
+                App.UI.renderDynamicDateSlider(); 
+
+                if(!userData.context_profile) App.UI.switchView('settings-view', document.querySelectorAll('.nav-item')[1]);
+                else App.UI.switchView('dashboard-view', document.querySelectorAll('.nav-item')[0]);
+            },
+            // نظام الدخول كـ ضيف سريع (حفظ البيانات محلياً فقط)
+            loginAsGuest: function() {
+                App.State.isGuest = true;
+                localStorage.setItem('ai_agent_guest', 'true');
+                localStorage.removeItem('ai_agent_session');
+
+                // جلب الإعدادات المحلية للضيف
+                const guestData = JSON.parse(localStorage.getItem('guest_user_data')) || {
+                    interests: '',
+                    context_profile: '',
+                    settings: { theme_color: "#58cc02", dark_mode: true, context_ai: true, active_model: "groq/compound" }
+                };
+
+                App.State.user = {
+                    email: 'guest@local',
+                    name: 'ضيف',
+                    interests: guestData.interests,
+                    context_profile: guestData.context_profile,
+                    settings: guestData.settings
+                };
+
+                // تعديل الواجهة للضيوف
+                document.getElementById('guest-badge').style.display = 'inline-block';
+                document.getElementById('cron-toggle-wrapper').style.display = 'none'; // إخفاء إعدادات الـ Cron للضيف
+                document.getElementById('guest-cron-notice').style.display = 'block'; // تنبيه بعدم تفعيل الكرون
+                document.getElementById('time-slider-section').style.display = 'none'; // إخفاء منزلق الوقت
+
+                document.getElementById('user-name-display').innerText = 'ضيف';
+                document.getElementById('user-avatar-initial').innerText = 'G';
+
+                App.Settings.applyToUI(guestData.settings, guestData.interests, guestData.context_profile);
+                App.UI.renderDynamicDateSlider();
+
+                App.UI.showToast('تم الدخول كضيف. البيانات تحفظ في جهازك فقط.');
+                if(!guestData.context_profile) App.UI.switchView('settings-view', document.querySelectorAll('.nav-item')[1]);
+                else App.UI.switchView('dashboard-view', document.querySelectorAll('.nav-item')[0]);
+            },
+            logout: function() { 
+                localStorage.removeItem('ai_agent_session'); 
+                localStorage.removeItem('ai_agent_guest');
+                App.State.user = null; 
+                App.UI.switchView('login-view'); 
+            }
+        };
+
+        window.handleCredentialResponse = function(response) {
+            const payload = JSON.parse(decodeURIComponent(atob(response.credential.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')).split('').map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join('')));
+            App.Auth.processLogin(payload.email, payload.name);
+        };
+
+        /**
+         * =========================================
+         *  إدارة البيانات وحفظ الإعدادات
+         * =========================================
+         */
+        App.Settings = {
+            applyToUI: function(settings, interests, contextProfile) {
+                if(!settings) return;
+                document.getElementById('dark-mode-toggle').checked = settings.dark_mode === true;
+                document.getElementById('context-ai-toggle').checked = settings.context_ai === true;
+                document.getElementById('model-select').value = settings.active_model || 'groq/compound';
+                
+                if(!App.State.isGuest) {
+                    document.getElementById('cron-enabled-toggle').checked = settings.cron_enabled === true;
+                }
+                
+                if(settings.theme_color) App.UI.changeTheme(settings.theme_color);
+                App.UI.toggleDarkMode();
+                
+                if(interests) document.getElementById('profile-interests').value = interests;
+                if(contextProfile) document.getElementById('ai-generated-context').value = contextProfile;
+
+                if(!App.State.isGuest) {
+                    setTimeout(() => {
+                        const w = document.getElementById('time-slider');
+                        const target = document.querySelector(`.time-slot[data-val="${settings.analysis_time || 8}"]`);
+                        if(target) w.scrollTop = target.offsetTop - (w.clientHeight/2) + (target.clientHeight/2);
+                    }, 500);
+                }
+            },
+            save: async function() {
+                const interests = document.getElementById('profile-interests').value;
+                const aiContext = document.getElementById('ai-generated-context').value;
+                const selectedModel = document.getElementById('model-select').value;
+                
+                const activeTime = document.querySelector('.time-slot.active');
+                
+                const newSettings = {
+                    theme_color: document.documentElement.style.getPropertyValue('--primary').trim(),
+                    dark_mode: document.getElementById('dark-mode-toggle').checked,
+                    context_ai: document.getElementById('context-ai-toggle').checked,
+                    active_model: selectedModel,
+                    cron_enabled: App.State.isGuest ? false : document.getElementById('cron-enabled-toggle').checked,
+                    analysis_time: (App.State.isGuest || !activeTime) ? 8 : parseInt(activeTime.dataset.val)
+                };
+                
+                App.UI.showToast('جاري حفظ الإعدادات...');
+                
+                if (App.State.isGuest) {
+                    // حفظ محلي للضيوف
+                    const guestData = { interests: interests, context_profile: aiContext, settings: newSettings };
+                    localStorage.setItem('guest_user_data', JSON.stringify(guestData));
+                    App.State.user.interests = interests;
+                    App.State.user.context_profile = aiContext;
+                    App.State.user.settings = newSettings;
+                    App.UI.showToast('تم الحفظ محلياً بنجاح!');
+                } else {
+                    // حفظ في Supabase للأعضاء
+                    const { error } = await App.State.supabase.from('users').update({ interests: interests, context_profile: aiContext, settings: newSettings }).eq('email', App.State.user.email);
+                    if (!error) { App.State.user.settings = newSettings; App.UI.showToast('تم حفظ الإعدادات بالسيرفر!'); }
+                    else App.UI.showToast('خطأ أثناء مزامنة الحفظ مع السيرفر', 'error');
+                }
+            }
+        };
+
+        /**
+         * =========================================
+         *  محرك الذكاء المباشر مع تجاوز CORS وخطأ الاتصال
+         * =========================================
+         */
+        App.AI = {
+            // منظومة الاتصال المزدوج لتجاوز الـ CORS ورفض المتصفح
+            callGroqSecure: async function(prompt) {
+                const payload = {
+                    model: "llama3-70b-8192", // المحرك الأكثر استقراراً وموثوقية
+                    messages: [{ role: "user", content: prompt }],
+                    temperature: 0.7
+                };
+                const headers = {
+                    'Authorization': `Bearer ${App.Config.GROQ_API_KEY}`,
+                    'Content-Type': 'application/json'
+                };
+
+                // محاولة الاتصال عبر وكيل CORS الأساسي
+                try {
+                    const response = await fetch("https://corsproxy.io/?" + encodeURIComponent("https://api.groq.com/openai/v1/chat/completions"), {
+                        method: 'POST',
+                        headers: headers,
+                        body: JSON.stringify(payload)
+                    });
+                    if (response.ok) return await response.json();
+                } catch(e) {
+                    console.warn("المحاولة الأولى عبر الوكيل فشلت، جاري تجربة الوكيل الاحتياطي...");
+                }
+
+                // محاولة الاتصال عبر وكيل CORS الاحتياطي (Allorigins)
+                try {
+                    const response = await fetch("https://api.allorigins.win/raw?url=" + encodeURIComponent("https://api.groq.com/openai/v1/chat/completions"), {
+                        method: 'POST',
+                        headers: headers,
+                        body: JSON.stringify(payload)
+                    });
+                    if (response.ok) return await response.json();
+                } catch(e) {
+                    console.warn("المحاولة الثانية عبر الوكيل الاحتياطي فشلت، جاري تجربة الاتصال المباشر...");
+                }
+
+                // الاتصال المباشر (الملاذ الأخير في حال إلغاء قيود CORS في المتصفح)
+                const directResponse = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+                    method: 'POST',
+                    headers: headers,
+                    body: JSON.stringify(payload)
+                });
+                return await directResponse.json();
+            },
+
+            generateContextProfile: async function() {
+                const userInterests = document.getElementById('profile-interests').value;
+                if(!userInterests) { App.UI.showToast('اكتب اهتماماتك أولاً لتوليد الملف', 'error'); return; }
+
+                document.getElementById('ai-generated-context').style.display = 'none';
+                document.getElementById('context-skeleton').style.display = 'block';
+
+                const prompt = `أنا مستخدم، وهذه اهتماماتي: "${userInterests}". اكتب لي ملف استيعاب (AI Context) بصيغة المخاطب المباشر للمحرك (مثال: "هذا المستخدم مهتم بـ.. ويجب التركيز على.."). اكتبها في 3 أسطر واضحة ومباشرة بدون مقدمات.`;
+
+                try {
+                    const result = await this.callGroqSecure(prompt);
+                    const generatedContext = result.choices[0].message.content.trim();
+                    
+                    document.getElementById('context-skeleton').style.display = 'none';
+                    const contextBox = document.getElementById('ai-generated-context');
+                    contextBox.style.display = 'block';
+                    contextBox.value = generatedContext;
+                    
+                    if(App.State.isGuest) {
+                        App.State.user.context_profile = generatedContext;
+                        App.State.user.interests = userInterests;
+                        // حفظ فوري في جلسة الضيف
+                        const guestData = { interests: userInterests, context_profile: generatedContext, settings: App.State.user.settings };
+                        localStorage.setItem('guest_user_data', JSON.stringify(guestData));
+                    } else {
+                        await App.State.supabase.from('users').update({ interests: userInterests, context_profile: generatedContext }).eq('email', App.State.user.email);
+                        App.State.user.context_profile = generatedContext;
+                    }
+                    
+                    App.UI.showToast('تم توليد بروفايل الاستيعاب وفهمه بنجاح!');
+                } catch(e) {
+                    console.error(e);
+                    document.getElementById('context-skeleton').style.display = 'none';
+                    document.getElementById('ai-generated-context').style.display = 'block';
+                    App.UI.showToast('حدث خطأ في الاتصال. تم استخدام نظام المحاكاة لتجاوز الرفض المباشر.', 'error');
+                    
+                    // محاكاة سياق في حال فشل الاتصال كلياً حتى لا يتعطل البرنامج
+                    const backupContext = `المستخدم مهتم جداً بـ: ${userInterests}. ركّز على تقديم تحليلات دقيقة ومنظمة وربطها بهذا الاهتمام دائماً.`;
+                    document.getElementById('ai-generated-context').value = backupContext;
+                }
+            },
+
+            requestNewAnalysis: async function() {
+                const contextProf = App.State.user.context_profile;
+                if(!contextProf) { App.UI.showToast('يرجى توليد ملف الذكاء في الإعدادات أولاً لتكوين سياق شخصي', 'error'); return; }
+
+                document.getElementById('msg-skeleton-loader').style.display = 'block';
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+
+                const prompt = `
+                تعليمات السياق الخاصة بهذا المستخدم:
+                ${contextProf}
+                
+                المطلوب الآن: قدم محتوى أو أخبار أو معلومات قيمة تتناسب بالضبط مع هذا السياق.
+                القواعد:
+                1. استخدم Markdown (### للعناوين الرئيسية، ** للكلمات الهامة).
+                2. ابدأ بمقدمة، ثم ملخص في نقاط، ثم تفاصيل دقيقة.
+                `;
+
+                try {
+                    const result = await this.callGroqSecure(prompt);
+                    let aiText = result.choices[0].message.content;
+                    const todayStr = new Date().toISOString().split('T')[0].replace(/-/g, '/');
+
+                    if (App.State.isGuest) {
+                        // حفظ الرسالة محلياً للضيوف
+                        const guestMessages = JSON.parse(localStorage.getItem('guest_messages')) || [];
+                        const newMsg = {
+                            id: Math.random().toString(36).substr(2, 9),
+                            created_at: new Date().toISOString(),
+                            send_date: todayStr,
+                            content: aiText,
+                            image_urls: []
+                        };
+                        guestMessages.unshift(newMsg);
+                        localStorage.setItem('guest_messages', JSON.stringify(guestMessages));
+                    } else {
+                        // حفظ في Supabase للأعضاء
+                        const { data, error } = await App.State.supabase.from('ai_messages').insert([{ user_email: App.State.user.email, send_date: todayStr, content: aiText, image_urls: [] }]).select().single();
+                        if(error) throw new Error('DB Save Error');
+                    }
+
+                    document.getElementById('msg-skeleton-loader').style.display = 'none';
+                    App.DB.loadMessages();
+                    App.UI.showToast('تم توليد التحليل الذكي بنجاح!');
+                } catch (error) {
+                    console.error(error); 
+                    App.UI.showToast('حدث خطأ أثناء الاتصال بالمحرك.', 'error');
+                    document.getElementById('msg-skeleton-loader').style.display = 'none';
+                }
+            }
+        };
+
+        /**
+         * =========================================
+         *  إدارة وعرض رسائل قاعدة البيانات والمحلي
+         * =========================================
+         */
+        App.DB = {
+            loadMessages: async function() {
+                const list = document.getElementById('messages-list');
+                list.innerHTML = '';
+                
+                let messages = [];
+
+                if (App.State.isGuest) {
+                    // جلب الرسائل من التخزين المحلي للضيوف
+                    messages = JSON.parse(localStorage.getItem('guest_messages')) || [];
+                } else {
+                    // جلب الرسائل من Supabase للأعضاء
+                    const { data } = await App.State.supabase.from('ai_messages').select('*').eq('user_email', App.State.user.email).order('created_at', { ascending: false });
+                    messages = data || [];
+                }
+
+                if (messages && messages.length > 0) {
+                    messages.forEach(msg => {
+                        const div = document.createElement('div'); div.className = 'card';
+                        div.innerHTML = `<div class="markdown-content">${App.UI.parseMarkdown(msg.content)}</div>
+                        <div style="margin-top:15px; font-size:12px; color:var(--text-muted); text-align:left; border-top: 1px dashed var(--card-border); padding-top: 10px;">أُرسلت في: ${new Date(msg.created_at).toLocaleTimeString('ar-EG', {hour:'2-digit', minute:'2-digit'})}</div>`;
+                        list.appendChild(div);
+                    });
+                } else {
+                    list.innerHTML = `<div style="text-align:center; padding: 40px; color: var(--text-muted); font-weight: 800;">لا توجد أبحاث بعد. اضغط على زر الزر العائم الأزرق بالأسفل لتوليد أول تحليل للذكاء الاصطناعي!</div>`;
+                }
+            }
+        };
+
+        window.addEventListener('DOMContentLoaded', () => App.init());
+    </script>
+</body>
+</html>
